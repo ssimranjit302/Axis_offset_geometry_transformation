@@ -1,0 +1,1565 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Axis-Offset Geometry Simulation</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        overflow: hidden;
+        background-color: #0b0c10;
+        color: #c5c6c7;
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      #canvas-container {
+        width: 100vw;
+        height: 100vh;
+        cursor: grab;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+      }
+      #canvas-container:active {
+        cursor: grabbing;
+      }
+
+      #ui-panel {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        background: rgba(31, 40, 51, 0.9);
+        padding: 25px;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(12px);
+        width: 320px;
+        max-width: 90vw;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+        border: 1px solid rgba(102, 252, 241, 0.2);
+        z-index: 10;
+      }
+
+      #ui-panel::-webkit-scrollbar {
+        width: 6px;
+      }
+      #ui-panel::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      #ui-panel::-webkit-scrollbar-thumb {
+        background: rgba(102, 252, 241, 0.3);
+        border-radius: 3px;
+      }
+      #ui-panel::-webkit-scrollbar-thumb:hover {
+        background: rgba(102, 252, 241, 0.6);
+      }
+
+      #math-panel {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(31, 40, 51, 0.9);
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(102, 252, 241, 0.2);
+        z-index: 10;
+        color: #e0e2e4;
+        font-family: "Times New Roman", Times, serif;
+        display: none;
+        flex-direction: column;
+        gap: 15px;
+        max-width: 90vw;
+      }
+
+      @media (max-width: 768px) {
+        #ui-panel {
+          top: 10px;
+          left: 10px;
+          width: calc(100vw - 20px);
+          max-height: 40vh;
+          padding: 15px;
+        }
+        #math-panel {
+          top: auto;
+          bottom: 80px;
+          right: 10px;
+          left: 10px;
+          width: calc(100vw - 20px);
+          padding: 15px;
+        }
+        #instruction {
+          bottom: 10px !important;
+          right: 10px !important;
+          left: 10px !important;
+          text-align: center;
+          border-right: none !important;
+          border-bottom: 4px solid #66fcf1;
+        }
+        .floating-label {
+          font-size: 12px !important;
+          padding: 2px 4px !important;
+        }
+        .eq-text {
+          font-size: 1.1rem !important;
+        }
+      }
+
+      h2 {
+        margin-top: 0;
+        font-size: 1.1rem;
+        margin-bottom: 20px;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: #66fcf1;
+        border-bottom: 1px solid rgba(102, 252, 241, 0.3);
+        padding-bottom: 10px;
+      }
+
+      .control-group {
+        margin-bottom: 18px;
+      }
+      .control-group label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.85rem;
+        margin-bottom: 8px;
+        color: #e0e2e4;
+        font-weight: 600;
+      }
+
+      .val-display {
+        color: #66fcf1;
+        font-family: monospace;
+        font-size: 0.95rem;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        cursor: pointer;
+        accent-color: #45a29e;
+        height: 6px;
+        background: #1f2833;
+        border-radius: 4px;
+        outline: none;
+        -webkit-appearance: none;
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        background: #66fcf1;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 0 10px rgba(102, 252, 241, 0.5);
+      }
+
+      .legend {
+        font-size: 0.8rem;
+        margin-top: 25px;
+        line-height: 1.8;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 15px;
+        border-radius: 8px;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 6px;
+      }
+      .color-box {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        margin-right: 10px;
+        display: inline-block;
+        box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+      }
+
+      #instruction {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(31, 40, 51, 0.8);
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        color: #c5c6c7;
+        pointer-events: none;
+        border-right: 4px solid #66fcf1;
+        z-index: 10;
+      }
+
+      #error-log {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255, 0, 0, 0.8);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: monospace;
+        z-index: 9999;
+        display: none;
+        max-width: 400px;
+        white-space: pre-wrap;
+      }
+
+      #loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.5rem;
+        color: #66fcf1;
+        z-index: 5;
+      }
+
+      .floating-label {
+        position: absolute;
+        color: #66fcf1;
+        font-family: monospace;
+        font-size: 14px;
+        font-weight: bold;
+        background: rgba(11, 12, 16, 0.85);
+        padding: 4px 8px;
+        border-radius: 4px;
+        border: 1px solid rgba(102, 252, 241, 0.5);
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+        z-index: 5;
+        display: none;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+      }
+
+      #label-probe-text {
+        color: #66ff66;
+        border-color: #66ff66;
+      }
+
+      .axis-label {
+        background: transparent;
+        border: none;
+        box-shadow: none;
+        color: #ffffff;
+        font-size: 16px;
+        letter-spacing: 1px;
+        text-shadow: 1px 1px 2px #000;
+      }
+    </style>
+    <!-- Import Maps for Three.js -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="error-log"></div>
+    <div id="loading">Loading 3D Simulation...</div>
+    <div id="canvas-container"></div>
+
+    <div id="instruction" style="max-width: 90vw">
+      <strong>Controls:</strong> Left-click: Rotate | Right-click: Pan |
+      Double-Click: Focus on Object
+    </div>
+
+    <!-- 3D Floating Labels -->
+    <div id="label-r-text" class="floating-label">R</div>
+    <div id="label-probe-text" class="floating-label">Probe</div>
+    <div
+      id="label-d-text"
+      class="floating-label"
+      style="color: #ff3366; border-color: #ff3366"
+    >
+      d vector
+    </div>
+
+    <div
+      id="label-origin"
+      class="floating-label axis-label"
+      style="
+        color: #fff;
+        font-weight: bold;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 4px;
+        border-radius: 4px;
+      "
+    >
+      Origin (0,0,0)
+    </div>
+    <div
+      id="label-aut"
+      class="floating-label"
+      style="
+        color: #ffaa00;
+        font-weight: bold;
+        background: rgba(0, 0, 0, 0.8);
+        border: 1px solid #ffaa00;
+        padding: 4px;
+        border-radius: 4px;
+        display: block;
+      "
+    >
+      AUT
+    </div>
+
+    <div id="math-panel">
+      <div
+        id="eq-step-1"
+        style="display: none; opacity: 0; transition: opacity 0.8s"
+      >
+        <div
+          style="
+            font-family: sans-serif;
+            font-size: 0.8rem;
+            color: #33ccff;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          "
+        >
+          Step 1 Complete
+        </div>
+        <div class="eq-text" style="font-size: 1.4rem">
+          <b>P</b><sub>el</sub>(&theta;) = <b>d</b> + R
+          <b>&ell;&#770;</b>(&theta;)
+        </div>
+      </div>
+      <div
+        id="eq-step-2"
+        style="
+          display: none;
+          opacity: 0;
+          transition: opacity 0.8s;
+          padding-top: 15px;
+          border-top: 1px solid rgba(102, 252, 241, 0.2);
+        "
+      >
+        <div
+          style="
+            font-family: sans-serif;
+            font-size: 0.8rem;
+            color: #66ff66;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+          "
+        >
+          Step 2 Complete
+        </div>
+        <div class="eq-text" style="font-size: 1.4rem">
+          <b>P</b><sub>i</sub>(&phi;,&theta;) = R<sub>z</sub>(&phi;) [<b>d</b> +
+          R <b>&ell;&#770;</b>(&theta;)]
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="label-step-1"
+      class="floating-label"
+      style="
+        display: none;
+        color: #111;
+        background: #33ccff;
+        border: none;
+        padding: 8px 12px;
+        font-weight: bold;
+        box-shadow: 0 0 15px #33ccff;
+        font-size: 16px;
+        border-radius: 8px;
+      "
+    >
+      Step 1 Complete
+    </div>
+    <div
+      id="label-step-2"
+      class="floating-label"
+      style="
+        display: none;
+        color: #111;
+        background: #66ff66;
+        border: none;
+        padding: 8px 12px;
+        font-weight: bold;
+        box-shadow: 0 0 15px #66ff66;
+        font-size: 16px;
+        border-radius: 8px;
+      "
+    >
+      Step 2 Complete
+    </div>
+
+    <div
+      id="label-cx"
+      class="floating-label axis-label"
+      style="
+        color: #00ffff;
+        font-weight: bold;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 4px;
+        border-radius: 4px;
+      "
+    >
+      Cx (266.2, 0, 600)
+    </div>
+    <div
+      id="label-rfit"
+      class="floating-label axis-label"
+      style="
+        color: #00ffff;
+        font-weight: bold;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 4px;
+        border-radius: 4px;
+      "
+    >
+      R_fit = 3383mm
+    </div>
+    <div
+      id="label-rref"
+      class="floating-label axis-label"
+      style="
+        color: #ffffff;
+        font-weight: bold;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 4px;
+        border-radius: 4px;
+      "
+    >
+      R_ref = 3000mm
+    </div>
+    <div id="label-x" class="floating-label axis-label" style="color: #666">
+      X
+    </div>
+    <div id="label-y" class="floating-label axis-label" style="color: #666">
+      Y
+    </div>
+    <div id="label-z" class="floating-label axis-label">Azimuth Axis (Z)</div>
+    <div
+      id="label-el-axis"
+      class="floating-label axis-label"
+      style="color: #ff3366"
+    >
+      Elevation Axis
+    </div>
+
+    <div id="ui-panel">
+      <h2>Geometry Controls</h2>
+      <div class="control-group">
+        <label
+          >Azimuth Rotation &phi;
+          <span id="val-phi" class="val-display">0&deg;</span></label
+        >
+        <input type="range" id="phi" min="-180" max="180" value="0" />
+      </div>
+      <div class="control-group">
+        <label
+          >Elevation Angle &theta;
+          <span id="val-theta" class="val-display">0&deg;</span></label
+        >
+        <input type="range" id="theta" min="-90" max="90" value="0" />
+      </div>
+      <div class="control-group">
+        <label
+          >Nominal Range R
+          <span id="val-r" class="val-display">3000</span></label
+        >
+        <input
+          type="range"
+          id="r"
+          min="1000"
+          max="5000"
+          step="10"
+          value="3000"
+        />
+      </div>
+      <div class="control-group" style="margin-top: 25px">
+        <label
+          >X Offset (dx) <span id="val-dx" class="val-display">650</span></label
+        >
+        <input
+          type="range"
+          id="dx"
+          min="-1000"
+          max="1000"
+          step="10"
+          value="650"
+        />
+      </div>
+      <div class="control-group">
+        <label
+          >Y Offset (dy) <span id="val-dy" class="val-display">0</span></label
+        >
+        <input
+          type="range"
+          id="dy"
+          min="-1000"
+          max="1000"
+          step="10"
+          value="0"
+        />
+      </div>
+      <div class="control-group">
+        <label
+          >Z Offset (dz) <span id="val-dz" class="val-display">600</span></label
+        >
+        <input
+          type="range"
+          id="dz"
+          min="-1000"
+          max="1000"
+          step="10"
+          value="600"
+        />
+      </div>
+
+      <div
+        class="control-group"
+        style="
+          margin-top: 20px;
+          padding-top: 15px;
+          border-top: 1px solid rgba(102, 252, 241, 0.2);
+          display: flex;
+          gap: 10px;
+        "
+      >
+        <button
+          id="btn-play"
+          style="
+            flex: 2;
+            padding: 10px;
+            background: #66fcf1;
+            color: #0b0c10;
+            font-weight: bold;
+            font-size: 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+          "
+        >
+          &#9658; Play Auto-Sim
+        </button>
+        <button
+          id="btn-pause"
+          style="
+            flex: 1;
+            padding: 10px;
+            background: #c5c6c7;
+            color: #0b0c10;
+            font-weight: bold;
+            font-size: 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+          "
+          disabled
+        >
+          &#10074;&#10074; Pause
+        </button>
+      </div>
+      <button
+        id="btn-surface"
+        style="
+          width: 100%;
+          padding: 10px;
+          margin-top: 10px;
+          background: #ffaa00;
+          color: #0b0c10;
+          font-weight: bold;
+          font-size: 1rem;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: 0.2s;
+        "
+      >
+        Show Distorted Surface
+      </button>
+      <button
+        id="btn-matlab-surface"
+        style="
+          width: 100%;
+          padding: 10px;
+          margin-top: 10px;
+          background: #00ffff;
+          color: #0b0c10;
+          font-weight: bold;
+          font-size: 1rem;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: 0.2s;
+        "
+      >
+        Show Fitted Sphere
+      </button>
+      <button
+        id="btn-ref-surface"
+        style="
+          width: 100%;
+          padding: 10px;
+          margin-top: 10px;
+          background: #ffffff;
+          color: #0b0c10;
+          font-weight: bold;
+          font-size: 1rem;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: 0.2s;
+        "
+      >
+        Show Raw Data
+      </button>
+    </div>
+
+    <script>
+      // Global Error Handler
+      window.onerror = function (msg, url, lineNo, columnNo, error) {
+        const errDiv = document.getElementById("error-log");
+        errDiv.style.display = "block";
+        errDiv.innerText += `Error: ${msg}\nLine: ${lineNo}\n\n`;
+        return false;
+      };
+    </script>
+
+    <script type="module">
+      import * as THREE from "three";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+      // Globals for Labels
+      let currentThreeDRot = new THREE.Vector3();
+      let currentThreePI = new THREE.Vector3();
+      let currentElAxisP1 = new THREE.Vector3();
+      let currentR = 40;
+
+      // Auto-Simulation Globals
+      let autoSimMode = 0;
+      let animProgress = 0;
+      let showStep1Label = false;
+      let showStep2Label = false;
+      let isPaused = false;
+      const clock = new THREE.Clock();
+
+      try {
+        document.getElementById("loading").style.display = "none";
+
+        // --- 1. Init Three.js Scene ---
+        const container = document.getElementById("canvas-container");
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x0b0c10, 0.000026);
+
+        const camera = new THREE.PerspectiveCamera(
+          45,
+          window.innerWidth / window.innerHeight,
+          100,
+          100000,
+        );
+        camera.position.set(7500, 7500, 9000);
+
+        const renderer = new THREE.WebGLRenderer({
+          antialias: true,
+          alpha: true,
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        container.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // --- 2. Add Helpers ---
+        // Mapping Mathematical model to Three.js:
+        const mapToThree = (x, y, z) => new THREE.Vector3(x, z, -y);
+
+        const gridHelper = new THREE.GridHelper(11250, 30, 0x1f2833, 0x1f2833);
+        scene.add(gridHelper);
+
+        // Custom axes representing the Mathematical Model
+        const axisMatX = new THREE.LineBasicMaterial({ color: 0x444444 });
+        const axisMatY = new THREE.LineBasicMaterial({ color: 0x444444 });
+        const xAxisLine = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints([
+            mapToThree(0, 0, 0),
+            mapToThree(3000, 0, 0),
+          ]),
+          axisMatX,
+        );
+        const yAxisLine = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints([
+            mapToThree(0, 0, 0),
+            mapToThree(0, 3000, 0),
+          ]),
+          axisMatY,
+        );
+        scene.add(xAxisLine);
+        scene.add(yAxisLine);
+
+        // True Azimuth Axis Line (Math Z)
+        const azAxisLine = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints([
+            mapToThree(0, 0, -3000),
+            mapToThree(0, 0, 3000),
+          ]),
+          new THREE.LineDashedMaterial({
+            color: 0xffffff,
+            dashSize: 300,
+            gapSize: 150,
+            linewidth: 2,
+          }),
+        );
+        azAxisLine.computeLineDistances();
+        scene.add(azAxisLine);
+
+        // True Elevation Axis Line (will be updated in animate)
+        const elAxisLine = new THREE.Line(
+          new THREE.BufferGeometry(),
+          new THREE.LineDashedMaterial({
+            color: 0xff3366,
+            dashSize: 300,
+            gapSize: 150,
+            linewidth: 2,
+          }),
+        );
+        scene.add(elAxisLine);
+
+        // --- 3. Add Objects ---
+        // Antenna Under Test (AUT) at Origin
+        const autGroup = new THREE.Group();
+        const autHorn = new THREE.Mesh(
+          new THREE.CylinderGeometry(50, 150, 200, 4), // Top=narrow, Bottom=wide
+          new THREE.MeshStandardMaterial({
+            color: 0xffaa00,
+            metalness: 0.8,
+            roughness: 0.3,
+          }),
+        );
+        // Cylinder defaults to pointing along Y (which is Math Z/Sky)
+        autHorn.rotation.y = Math.PI / 4; // rotate to diamond shape
+        autHorn.position.y = 100; // shift so base is perfectly on the origin
+        autGroup.add(autHorn);
+        autGroup.position.copy(mapToThree(0, 0, 0));
+        scene.add(autGroup);
+
+        const originSphere = new THREE.Mesh(
+          new THREE.SphereGeometry(30, 32, 32),
+          new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.2,
+            metalness: 0.8,
+            emissive: 0xffffff,
+            emissiveIntensity: 0.5,
+          }),
+        );
+        originSphere.position.copy(mapToThree(0, 0, 0));
+        scene.add(originSphere);
+
+        // Step A (Before Turn) Start Point
+        const unrotatedCenterSphere = new THREE.Mesh(
+          new THREE.SphereGeometry(30, 32, 32),
+          new THREE.MeshStandardMaterial({
+            color: 0x33ccff,
+            roughness: 0.2,
+            metalness: 0.8,
+            emissive: 0x33ccff,
+            emissiveIntensity: 0.3,
+          }),
+        );
+        scene.add(unrotatedCenterSphere);
+
+        // Step A (Before Turn) Probe Point
+        const pElSphere = new THREE.Mesh(
+          new THREE.SphereGeometry(30, 32, 32),
+          new THREE.MeshStandardMaterial({
+            color: 0x33ccff,
+            roughness: 0.2,
+            metalness: 0.8,
+          }),
+        );
+        scene.add(pElSphere);
+
+        // Mechanical Hinges
+        // Azimuth Hinge (Vertical cylinder at origin)
+        const azHingeMesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(80, 80, 150, 32),
+          new THREE.MeshStandardMaterial({
+            color: 0x666666,
+            metalness: 0.8,
+            roughness: 0.3,
+            transparent: true,
+            opacity: 0.4,
+          }),
+        );
+        scene.add(azHingeMesh);
+
+        // Elevation Hinge (Horizontal cylinder at rotated offset d)
+        const elHingeGroup = new THREE.Group();
+        const elHingeMesh = new THREE.Mesh(
+          new THREE.CylinderGeometry(60, 60, 200, 32),
+          new THREE.MeshStandardMaterial({
+            color: 0xff3366,
+            metalness: 0.8,
+            roughness: 0.3,
+          }),
+        );
+        elHingeMesh.rotation.x = Math.PI / 2; // Align with Math Y axis (Three -Z)
+        elHingeGroup.add(elHingeMesh);
+        scene.add(elHingeGroup);
+
+        // L-Bracket Mechanical Arms
+        const verticalArm = new THREE.Mesh(
+          new THREE.CylinderGeometry(40, 40, 1, 16),
+          new THREE.MeshStandardMaterial({
+            color: 0xaaaaaa,
+            metalness: 0.8,
+            roughness: 0.4,
+          }),
+        );
+        scene.add(verticalArm);
+
+        const horizontalArm = new THREE.Mesh(
+          new THREE.CylinderGeometry(40, 40, 1, 16),
+          new THREE.MeshStandardMaterial({
+            color: 0xaaaaaa,
+            metalness: 0.8,
+            roughness: 0.4,
+          }),
+        );
+        // Horizontal arm is horizontal
+        horizontalArm.rotation.x = Math.PI / 2;
+        horizontalArm.rotation.z = Math.PI / 2;
+        scene.add(horizontalArm);
+
+        // The mathematical d vector line
+        const dVectorLine = new THREE.Line(
+          new THREE.BufferGeometry(),
+          new THREE.LineDashedMaterial({
+            color: 0xff3366,
+            dashSize: 150,
+            gapSize: 150,
+          }),
+        );
+        scene.add(dVectorLine);
+
+        // Distorted Surface Mesh
+        const surfaceGeo = new THREE.BufferGeometry();
+        const surfaceMat = new THREE.MeshStandardMaterial({
+          color: 0x00ffcc,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.5,
+          wireframe: true,
+        });
+        const distortedSurface = new THREE.Mesh(surfaceGeo, surfaceMat);
+        distortedSurface.visible = false;
+        scene.add(distortedSurface);
+
+        // Reference Perfect Sphere Mesh
+        const refSurfaceGeo = new THREE.BufferGeometry();
+        const refSurfaceMat = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.6,
+          wireframe: true,
+        });
+        const refSurface = new THREE.Mesh(refSurfaceGeo, refSurfaceMat);
+        // MATLAB Fitted Sphere Mesh
+        const matlabSurfaceGeo = new THREE.SphereGeometry(3383.5, 32, 32);
+        const matlabSurfaceMat = new THREE.MeshStandardMaterial({
+          color: 0x00ffff,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.15,
+          wireframe: true,
+        });
+        const matlabSurface = new THREE.Mesh(
+          matlabSurfaceGeo,
+          matlabSurfaceMat,
+        );
+        matlabSurface.position.copy(mapToThree(266.2, 0, 600));
+        matlabSurface.visible = false;
+        scene.add(matlabSurface);
+
+        const cxSphere = new THREE.Mesh(
+          new THREE.SphereGeometry(40, 32, 32),
+          new THREE.MeshStandardMaterial({
+            color: 0x00ffff,
+            emissive: 0x00ffff,
+            emissiveIntensity: 0.8,
+          }),
+        );
+        cxSphere.position.copy(mapToThree(266.2, 0, 600));
+        cxSphere.visible = false;
+        scene.add(cxSphere);
+
+        const rFitLine = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints([
+            mapToThree(266.2, 0, 600),
+            mapToThree(266.2, 3383.5, 600),
+          ]),
+          new THREE.LineDashedMaterial({
+            color: 0x00ffff,
+            dashSize: 100,
+            gapSize: 50,
+          }),
+        );
+        rFitLine.computeLineDistances();
+        rFitLine.visible = false;
+        scene.add(rFitLine);
+            const rRefLine = new THREE.Line(
+                new THREE.BufferGeometry().setFromPoints([mapToThree(0, 0, 0), mapToThree(3000, 0, 0)]),
+                new THREE.LineDashedMaterial({ color: 0xffffff, dashSize: 100, gapSize: 50 })
+            );
+            rRefLine.computeLineDistances();
+            rRefLine.visible = false;
+            scene.add(rRefLine);
+
+
+        refSurface.visible = false;
+        scene.add(refSurface);
+
+        // Final Probe Model (Step B)
+        const probeGroup = new THREE.Group();
+        const coneGeo = new THREE.ConeGeometry(50, 150, 16);
+        coneGeo.translate(0, -75, 0); // Tip at origin
+        coneGeo.rotateX(-Math.PI / 2); // Point tip along -Z
+        const probeCone = new THREE.Mesh(
+          coneGeo,
+          new THREE.MeshStandardMaterial({
+            color: 0x66ff66,
+            metalness: 0.8,
+            roughness: 0.2,
+          }),
+        );
+        probeGroup.add(probeCone);
+        scene.add(probeGroup);
+
+        // Lines
+        const rLine1 = new THREE.Line(
+          new THREE.BufferGeometry(),
+          new THREE.LineDashedMaterial({
+            color: 0x33ccff,
+            dashSize: 150,
+            gapSize: 150,
+          }),
+        );
+        scene.add(rLine1);
+
+        const rLine2 = new THREE.Line(
+          new THREE.BufferGeometry(),
+          new THREE.LineBasicMaterial({ color: 0x66ff66, linewidth: 3 }),
+        );
+        scene.add(rLine2);
+
+        const arcLine = new THREE.Line(
+          new THREE.BufferGeometry(),
+          new THREE.LineDashedMaterial({
+            color: 0xffcc00,
+            dashSize: 75,
+            gapSize: 75,
+          }),
+        );
+        scene.add(arcLine);
+
+        const elevArcLine = new THREE.Line(
+          new THREE.BufferGeometry(),
+          new THREE.LineDashedMaterial({
+            color: 0xff33cc,
+            dashSize: 75,
+            gapSize: 75,
+          }),
+        );
+        scene.add(elevArcLine);
+
+        const animSphere = new THREE.Mesh(
+          new THREE.SphereGeometry(50, 32, 32),
+          new THREE.MeshStandardMaterial({
+            color: 0xffff00,
+            emissive: 0xffff00,
+            emissiveIntensity: 0.8,
+          }),
+        );
+        animSphere.visible = false;
+        scene.add(animSphere);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0xffffff, 1);
+        pointLight.position.set(3750, 7500, 3750);
+        scene.add(pointLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        dirLight.position.set(-3750, 3750, 3750);
+        scene.add(dirLight);
+
+        // --- 4. Simulation Logic ---
+        const inputs = ["phi", "theta", "r", "dx", "dy", "dz"];
+        const values = {};
+
+        function updateSurface() {
+          if (
+            !distortedSurface.visible &&
+            !refSurface.visible &&
+            !matlabSurface.visible
+          )
+            return;
+
+          const R = values.r;
+          const dx = values.dx;
+          const dy = values.dy;
+          const dz = values.dz;
+
+          // Exact sample data limits (-10 to 10)
+          const az_range = 10;
+          const el_range = 10;
+          const steps = 40;
+
+          const vertices = [];
+          const refVertices = [];
+
+          const indices = [];
+
+          // Calculate perfect boresight distance for the reference sphere
+          const R_center = Math.sqrt((dx + R) * (dx + R) + dy * dy + dz * dz);
+
+          for (let i = 0; i <= steps; i++) {
+            const el = (((i / steps) * 2 - 1) * el_range * Math.PI) / 180;
+            for (let j = 0; j <= steps; j++) {
+              const az = (((j / steps) * 2 - 1) * az_range * Math.PI) / 180;
+
+              const px_look = R * Math.cos(el);
+              const pz_look = R * Math.sin(el);
+              const pel_x = dx + px_look;
+              const pel_y = dy;
+              const pel_z = dz + pz_look;
+
+              const pi_x = pel_x * Math.cos(az) - pel_y * Math.sin(az);
+              const pi_y = pel_x * Math.sin(az) + pel_y * Math.cos(az);
+              const pi_z = pel_z;
+
+              // Distorted Vertex
+              const v = mapToThree(pi_x, pi_y, pi_z);
+              vertices.push(v.x, v.y, v.z);
+
+              // Perfect SNF Sphere Vertex (Raw GRD data geometry, origin=0,0,0, radius=R)
+              const rx = R * Math.cos(el) * Math.cos(az);
+              const ry = R * Math.cos(el) * Math.sin(az);
+              const rz = R * Math.sin(el);
+              const vr = mapToThree(rx, ry, rz);
+              refVertices.push(vr.x, vr.y, vr.z);
+            }
+          }
+
+          for (let i = 0; i < steps; i++) {
+            for (let j = 0; j < steps; j++) {
+              const a = i * (steps + 1) + j;
+              const b = a + 1;
+              const c = (i + 1) * (steps + 1) + j;
+              const d = c + 1;
+              indices.push(a, b, d);
+              indices.push(a, d, c);
+            }
+          }
+
+          surfaceGeo.setAttribute(
+            "position",
+            new THREE.Float32BufferAttribute(vertices, 3),
+          );
+          surfaceGeo.setIndex(indices);
+          surfaceGeo.computeVertexNormals();
+
+          refSurfaceGeo.setAttribute(
+            "position",
+            new THREE.Float32BufferAttribute(refVertices, 3),
+          );
+          refSurfaceGeo.setIndex(indices);
+          refSurfaceGeo.computeVertexNormals();
+        }
+
+        function updateSimulation() {
+          inputs.forEach((id) => {
+            values[id] = parseFloat(document.getElementById(id).value);
+            const displaySuffix = id === "phi" || id === "theta" ? "&deg;" : "";
+            document.getElementById(`val-${id}`).innerHTML =
+              values[id] + displaySuffix;
+          });
+
+          const showStepA = false;
+          unrotatedCenterSphere.visible = showStepA;
+          pElSphere.visible = showStepA;
+          rLine1.visible = showStepA;
+
+          const phiRad = (values.phi * Math.PI) / 180;
+          const thetaRad = (values.theta * Math.PI) / 180;
+          const R = values.r;
+          const dx = values.dx;
+          const dy = values.dy;
+          const dz = values.dz;
+
+          const threeOrigin = mapToThree(0, 0, 0);
+
+          // --- Step A: Unrotated positions (colored Blue) ---
+          const threeD = mapToThree(dx, dy, dz);
+          unrotatedCenterSphere.position.copy(threeD);
+
+          const px_look = R * Math.cos(thetaRad);
+          const py_look = 0;
+          const pz_look = R * Math.sin(thetaRad);
+          const pel_x = dx + px_look;
+          const pel_y = dy + py_look;
+          const pel_z = dz + pz_look;
+          const threePEl = mapToThree(pel_x, pel_y, pel_z);
+
+          pElSphere.position.copy(threePEl);
+
+          rLine1.geometry.setFromPoints([threeD, threePEl]);
+          rLine1.computeLineDistances();
+          rLine1.geometry.attributes.position.needsUpdate = true;
+
+          // --- Step B: Rotated positions (colored Green & Red) ---
+          const d_rot_x = dx * Math.cos(phiRad) - dy * Math.sin(phiRad);
+          const d_rot_y = dx * Math.sin(phiRad) + dy * Math.cos(phiRad);
+          const d_rot_z = dz;
+          const threeDRot = mapToThree(d_rot_x, d_rot_y, d_rot_z);
+
+          // Position Elevation Hinge at the rotated physical offset
+          elHingeGroup.position.copy(threeDRot);
+          elHingeGroup.rotation.y = phiRad; // Rotate elevation axis along with Azimuth
+
+          // L-Bracket Arms
+          const threeZOffset = mapToThree(0, 0, dz);
+
+          // Vertical Arm scales to dz
+          const heightDz = Math.abs(dz);
+          if (heightDz > 0.1) {
+            verticalArm.visible = true;
+            verticalArm.scale.set(1, heightDz, 1);
+            verticalArm.position.copy(mapToThree(0, 0, dz / 2));
+          } else {
+            verticalArm.visible = false;
+          }
+
+          // Horizontal Arm scales to distance from Z-axis to threeDRot
+          const horizDist = Math.sqrt(d_rot_x * d_rot_x + d_rot_y * d_rot_y);
+          if (horizDist > 0.1) {
+            horizontalArm.visible = true;
+            horizontalArm.scale.set(1, horizDist, 1);
+            const midHoriz = mapToThree(d_rot_x / 2, d_rot_y / 2, dz);
+            horizontalArm.position.copy(midHoriz);
+            horizontalArm.lookAt(threeDRot); // align with the offset vector
+            horizontalArm.rotateX(Math.PI / 2);
+          } else {
+            horizontalArm.visible = false;
+          }
+
+          // Mathematical d vector
+          dVectorLine.geometry.setFromPoints([threeOrigin, threeDRot]);
+          dVectorLine.computeLineDistances();
+          dVectorLine.geometry.attributes.position.needsUpdate = true;
+
+          // Explicit Elevation Axis Line
+          const mathYDirX = -Math.sin(phiRad);
+          const mathYDirY = Math.cos(phiRad);
+          const elAxisP1 = mapToThree(
+            d_rot_x + mathYDirX * 3000,
+            d_rot_y + mathYDirY * 3000,
+            dz,
+          );
+          const elAxisP2 = mapToThree(
+            d_rot_x - mathYDirX * 3000,
+            d_rot_y - mathYDirY * 3000,
+            dz,
+          );
+          elAxisLine.geometry.setFromPoints([elAxisP1, elAxisP2]);
+          elAxisLine.computeLineDistances();
+          elAxisLine.geometry.attributes.position.needsUpdate = true;
+
+          const pi_x = pel_x * Math.cos(phiRad) - pel_y * Math.sin(phiRad);
+          const pi_y = pel_x * Math.sin(phiRad) + pel_y * Math.cos(phiRad);
+          const pi_z = pel_z;
+          const threePI = mapToThree(pi_x, pi_y, pi_z);
+
+          rLine2.geometry.setFromPoints([threeDRot, threePI]);
+          rLine2.geometry.attributes.position.needsUpdate = true;
+
+          // Position and point the Probe
+          probeGroup.position.copy(threePI);
+          probeGroup.lookAt(threeDRot); // Point tip (-Z) at the elevation center
+
+          const arcPts = [];
+          const steps = 50;
+          for (let i = 0; i <= steps; i++) {
+            const fraction = i / steps;
+            const currentPhi = phiRad * fraction;
+            const ax =
+              pel_x * Math.cos(currentPhi) - pel_y * Math.sin(currentPhi);
+            const ay =
+              pel_x * Math.sin(currentPhi) + pel_y * Math.cos(currentPhi);
+            const az = pel_z;
+            arcPts.push(mapToThree(ax, ay, az));
+          }
+          arcLine.geometry.setFromPoints(arcPts);
+          arcLine.computeLineDistances();
+          arcLine.geometry.attributes.position.needsUpdate = true;
+
+          const elevArcPts = [];
+          const elSteps = 30;
+          for (let i = 0; i <= elSteps; i++) {
+            const frac = i / elSteps;
+            const currentTheta = thetaRad * frac;
+            const pxl = R * Math.cos(currentTheta);
+            const pzl = R * Math.sin(currentTheta);
+            const pelx = dx + pxl;
+            const pely = dy;
+            const pelz = dz + pzl;
+            const ax = pelx * Math.cos(phiRad) - pely * Math.sin(phiRad);
+            const ay = pelx * Math.sin(phiRad) + pely * Math.cos(phiRad);
+            const az = pelz;
+            elevArcPts.push(mapToThree(ax, ay, az));
+          }
+          elevArcLine.geometry.setFromPoints(elevArcPts);
+          elevArcLine.computeLineDistances();
+          elevArcLine.geometry.attributes.position.needsUpdate = true;
+
+          // Save globals for animate loop
+          currentThreeDRot.copy(threeDRot);
+          currentThreePI.copy(threePI);
+          currentElAxisP1.copy(elAxisP1);
+          currentR = R;
+
+          updateSurface();
+        }
+
+        inputs.forEach((id) => {
+          document
+            .getElementById(id)
+            .addEventListener("input", updateSimulation);
+        });
+
+        document
+          .getElementById("btn-ref-surface")
+          .addEventListener("click", () => {
+            refSurface.visible = !refSurface.visible;
+                rRefLine.visible = refSurface.visible;
+            if (refSurface.visible) {
+              document.getElementById("btn-ref-surface").innerText =
+                "Hide Raw Data";
+              document.getElementById("btn-ref-surface").style.background =
+                "#dddddd";
+              updateSurface();
+            } else {
+              document.getElementById("btn-ref-surface").innerText =
+                "Show Raw Data";
+              document.getElementById("btn-ref-surface").style.background =
+                "#ffffff";
+            }
+          });
+
+        document
+          .getElementById("btn-matlab-surface")
+          .addEventListener("click", () => {
+            matlabSurface.visible = !matlabSurface.visible;
+            cxSphere.visible = matlabSurface.visible;
+            rFitLine.visible = matlabSurface.visible;
+            if (matlabSurface.visible) {
+              document.getElementById("btn-matlab-surface").innerText =
+                "Hide Fitted Sphere";
+              document.getElementById("btn-matlab-surface").style.background =
+                "#00aaaa";
+              updateSurface();
+            } else {
+              document.getElementById("btn-matlab-surface").innerText =
+                "Show Fitted Sphere";
+              document.getElementById("btn-matlab-surface").style.background =
+                "#00ffff";
+            }
+          });
+
+        document.getElementById("btn-surface").addEventListener("click", () => {
+          distortedSurface.visible = !distortedSurface.visible;
+          if (distortedSurface.visible) {
+            document.getElementById("btn-surface").innerText =
+              "Hide Distorted Surface";
+            document.getElementById("btn-surface").style.background = "#ff3366";
+            updateSurface();
+          } else {
+            document.getElementById("btn-surface").innerText =
+              "Show Distorted Surface";
+            document.getElementById("btn-surface").style.background = "#ffaa00";
+          }
+        });
+
+        document.getElementById("btn-play").addEventListener("click", () => {
+          if (autoSimMode === 0) {
+            document.getElementById("phi").value = 0;
+            document.getElementById("theta").value = 0;
+            updateSimulation();
+
+            document.getElementById("math-panel").style.display = "none";
+            document.getElementById("eq-step-1").style.display = "none";
+            document.getElementById("eq-step-1").style.opacity = "0";
+            document.getElementById("eq-step-2").style.display = "none";
+            document.getElementById("eq-step-2").style.opacity = "0";
+
+            autoSimMode = 1;
+            animProgress = 0;
+            isPaused = false;
+            animSphere.position.copy(mapToThree(0, 0, 0));
+            animSphere.visible = true;
+
+            inputs.forEach(
+              (id) => (document.getElementById(id).disabled = true),
+            );
+            document.getElementById("btn-play").disabled = true;
+            document.getElementById("btn-play").innerText = "Playing...";
+            document.getElementById("btn-pause").disabled = false;
+            document.getElementById("btn-pause").innerHTML =
+              "&#10074;&#10074; Pause";
+          }
+        });
+
+        document.getElementById("btn-pause").addEventListener("click", () => {
+          if (autoSimMode !== 0) {
+            isPaused = !isPaused;
+            if (isPaused) {
+              document.getElementById("btn-pause").innerHTML = "&#9658; Resume";
+              document.getElementById("btn-play").innerText = "Paused";
+            } else {
+              document.getElementById("btn-pause").innerHTML =
+                "&#10074;&#10074; Pause";
+              document.getElementById("btn-play").innerText = "Playing...";
+            }
+          }
+        });
+
+        window.addEventListener("resize", () => {
+          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        function updateStaticLabel(id, vector) {
+          const v = vector.clone();
+          v.project(camera);
+          const el = document.getElementById(id);
+          if (v.z < 1) {
+            el.style.display = "block";
+            el.style.left = `${(v.x * 0.5 + 0.5) * window.innerWidth}px`;
+            el.style.top = `${(v.y * -0.5 + 0.5) * window.innerHeight}px`;
+          } else {
+            el.style.display = "none";
+          }
+        }
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        window.addEventListener("dblclick", (event) => {
+          mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+          mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+          raycaster.setFromCamera(mouse, camera);
+
+          // Intersect all visible meshes
+          const meshes = [];
+          scene.traverse((child) => {
+            if (child.isMesh && child.visible) {
+              meshes.push(child);
+            }
+          });
+
+          const intersects = raycaster.intersectObjects(meshes, false);
+          if (intersects.length > 0) {
+            // Move the OrbitControls target to the clicked point
+            controls.target.copy(intersects[0].point);
+            controls.update();
+
+            // Flash a small indicator
+            const indicator = new THREE.Mesh(
+              new THREE.SphereGeometry(20, 16, 16),
+              new THREE.MeshBasicMaterial({ color: 0xffffff }),
+            );
+            indicator.position.copy(intersects[0].point);
+            scene.add(indicator);
+            setTimeout(() => scene.remove(indicator), 300);
+          }
+        });
+
+        function animate() {
+          requestAnimationFrame(animate);
+          const delta = clock.getDelta();
+          controls.update();
+
+          // Update HTML labels positions
+          if (currentThreeDRot && currentThreePI) {
+            const dMidPoint = new THREE.Vector3()
+              .addVectors(new THREE.Vector3(0, 0, 0), currentThreeDRot)
+              .multiplyScalar(0.5);
+            updateStaticLabel("label-d-text", dMidPoint);
+
+            const midPoint = new THREE.Vector3()
+              .addVectors(currentThreeDRot, currentThreePI)
+              .multiplyScalar(0.5);
+            updateStaticLabel("label-r-text", midPoint);
+            const rLabel = document.getElementById("label-r-text");
+            rLabel.innerText = `R = ${currentR}mm`;
+
+            updateStaticLabel("label-probe-text", currentThreePI);
+            const pLabel = document.getElementById("label-probe-text");
+            pLabel.style.left = `${parseFloat(pLabel.style.left) + 25}px`;
+            pLabel.style.top = `${parseFloat(pLabel.style.top) - 25}px`;
+
+            updateStaticLabel("label-el-axis", currentElAxisP1);
+          }
+
+          updateStaticLabel("label-x", mapToThree(3200, 0, 0));
+          updateStaticLabel("label-y", mapToThree(0, 3200, 0));
+          updateStaticLabel("label-z", mapToThree(0, 0, 3200));
+          updateStaticLabel("label-origin", new THREE.Vector3(0, -450, 0));
+          updateStaticLabel("label-aut", new THREE.Vector3(0, -150, 0));
+
+          if (matlabSurface.visible) {
+              updateStaticLabel('label-cx', mapToThree(266.2, 0, 600));
+              updateStaticLabel('label-rfit', mapToThree(266.2, 1700, 600));
+          } else {
+              document.getElementById('label-cx').style.display = 'none';
+              document.getElementById('label-rfit').style.display = 'none';
+          }
+
+          if (refSurface.visible) {
+              updateStaticLabel('label-rref', mapToThree(1500, 0, 0));
+          } else {
+              document.getElementById('label-rref').style.display = 'none';
+          }
+
+          // Auto-simulation logic
+          if (!isPaused) {
+            if (autoSimMode === 1) {
+              animProgress += 0.9 * delta;
+              const threeD = mapToThree(values.dx, values.dy, values.dz);
+              animSphere.position.lerpVectors(
+                mapToThree(0, 0, 0),
+                threeD,
+                Math.min(animProgress, 1),
+              );
+              if (animProgress >= 1.2) {
+                autoSimMode = 2;
+                animProgress = 0;
+              }
+            } else if (autoSimMode === 2) {
+              animProgress += 0.9 * delta;
+              const threeD = mapToThree(values.dx, values.dy, values.dz);
+              const p0 = mapToThree(values.dx + values.r, values.dy, values.dz);
+              animSphere.position.lerpVectors(
+                threeD,
+                p0,
+                Math.min(animProgress, 1),
+              );
+              if (animProgress >= 1.2) {
+                autoSimMode = 3;
+                animProgress = 0;
+              }
+            } else if (autoSimMode === 3) {
+              animProgress += 0.6 * delta;
+              const targetTheta = 10;
+              const curTheta = Math.min(
+                animProgress * targetTheta,
+                targetTheta,
+              );
+              document.getElementById("theta").value = curTheta;
+              updateSimulation();
+              animSphere.position.copy(currentThreePI);
+              if (animProgress >= 1.5) {
+                autoSimMode = 99; // Internal Pause
+                animProgress = 0;
+                showStep1Label = true;
+
+                document.getElementById("math-panel").style.display = "flex";
+                const eq1 = document.getElementById("eq-step-1");
+                eq1.style.display = "block";
+                setTimeout(() => (eq1.style.opacity = "1"), 50);
+              }
+            } else if (autoSimMode === 99) {
+              animProgress += 0.6 * delta;
+              if (animProgress >= 2.0) {
+                // stay longer
+                showStep1Label = false;
+                autoSimMode = 4;
+                animProgress = 0;
+              }
+            } else if (autoSimMode === 4) {
+              animProgress += 0.6 * delta;
+              const targetPhi = 10;
+              const curPhi = Math.min(animProgress * targetPhi, targetPhi);
+              document.getElementById("phi").value = curPhi;
+              updateSimulation();
+              animSphere.position.copy(currentThreePI);
+              if (animProgress >= 1.5) {
+                autoSimMode = 100; // Internal Pause
+                animProgress = 0;
+                showStep2Label = true;
+
+                const eq2 = document.getElementById("eq-step-2");
+                eq2.style.display = "block";
+                setTimeout(() => (eq2.style.opacity = "1"), 50);
+              }
+            } else if (autoSimMode === 100) {
+              animProgress += 0.6 * delta;
+              if (animProgress >= 2.5) {
+                // stay longer
+                showStep2Label = false;
+                autoSimMode = 0;
+                animSphere.visible = false;
+                inputs.forEach(
+                  (id) => (document.getElementById(id).disabled = false),
+                );
+                document.getElementById("btn-play").disabled = false;
+                document.getElementById("btn-play").innerHTML =
+                  "&#9658; Play Auto-Sim";
+                document.getElementById("btn-pause").disabled = true;
+                document.getElementById("btn-pause").innerHTML =
+                  "&#10074;&#10074; Pause";
+              }
+            }
+          }
+
+          if (showStep1Label || showStep2Label) {
+            const el = document.getElementById(
+              showStep1Label ? "label-step-1" : "label-step-2",
+            );
+            el.style.display = "block";
+            const v = currentThreePI.clone();
+            v.project(camera);
+            el.style.left = `${(v.x * 0.5 + 0.5) * window.innerWidth}px`;
+            el.style.top = `${(v.y * -0.5 + 0.5) * window.innerHeight - 40}px`;
+          } else {
+            document.getElementById("label-step-1").style.display = "none";
+            document.getElementById("label-step-2").style.display = "none";
+          }
+
+          renderer.render(scene, camera);
+        }
+
+        updateSimulation();
+        animate();
+      } catch (e) {
+        const errDiv = document.getElementById("error-log");
+        errDiv.style.display = "block";
+        errDiv.innerText += `Exception: ${e.message}\n${e.stack}\n`;
+      }
+    </script>
+  </body>
+</html>
